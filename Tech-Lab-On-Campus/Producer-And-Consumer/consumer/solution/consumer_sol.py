@@ -1,40 +1,40 @@
 import pika
 import os
-
+from consumer_interface import mqConsumerInterface
 class mqConsumer(mqConsumerInterface):
     def __init__(self, binding_key: str, exchange_name: str, queue_name: str) -> None:
         self.binding_key = binding_key
         self.exchange_name = exchange_name
         self.queue_name = queue_name
-        self.setup_RMQConnection()
+        self.setupRMQConnection()
     
     def setupRMQConnection(self) -> None:
         con_params = pika.URLParameters(os.environ["AMQP_URL"])
-        connection = pika.BlockingConnection(parameters=con_params)
-        channel = connection.channel()
+        self.connection = pika.BlockingConnection(parameters=con_params)
+        self.channel = self.connection.channel()
         # if queue not present...
-        channel.queue_declare(queue="Queue Name")
+        self.channel.queue_declare(queue=self.queue_name)
         # if exchange not present...
-        exchange = channel.exchange_declare(exchange="Exchange Name")
-        channel.queue_bind(
-            queue= "Queue Name",
-            routing_key= "Routing Key",
-            exchange="Exchange Name",
+        exchange = self.channel.exchange_declare(exchange=self.exchange_name)
+        self.channel.queue_bind(
+            queue= self.queue_name,
+            routing_key= self.binding_key,
+            exchange=self.exchange_name,
         )
-        channel.basic_consume(
-            "Queue Name", Function Name, auto_ack=False
+        self.channel.basic_consume(
+            self.queue_name, "TEST FUNCTION NAME", auto_ack=False
         )
     
     def on_message_callback(self, channel, method_frame, header_fram, body) -> None:
-        channel.basic_ack(method_frame.delivery_tag, False)
+        self.channel.basic_ack(method_frame.delivery_tag, False)
         message = json.loads(body)
         print(message)
     
     def startconsuming(self) -> None:
         print('[*] Waiting for messages. To exit press CTRL+C')
-        channel.start_consuming()
+        self.channel.start_consuming()
     
     def __del__(self) -> None:
         print('Closing RMQ connection on destruction')
-        channel.close()
-        connection.close()
+        self.channel.close()
+        self.connection.close()
