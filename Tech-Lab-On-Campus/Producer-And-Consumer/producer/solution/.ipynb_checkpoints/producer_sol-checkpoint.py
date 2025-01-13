@@ -23,3 +23,5 @@ class mqProducer(mqProducerInterface):
         )
         self.channel.close()
         self.connection.close()
+
+
